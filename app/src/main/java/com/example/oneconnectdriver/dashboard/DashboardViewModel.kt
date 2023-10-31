@@ -1,6 +1,5 @@
 package com.example.oneconnectdriver.dashboard
 
-import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -19,7 +18,11 @@ class DashboardViewModel @Inject constructor(
 ) : ViewModel() {
     val emTransportModel = mutableStateOf<EmTransportModel?>(null)
     val emTransportId = mutableStateOf("")
-    val emCallAktifNamunBelumKonfirmasi = mutableStateListOf<EmCallStruct>()
+    val emCalls = mutableStateListOf<EmCallStruct>()
+
+    val showRationaleDialog = mutableStateOf(false)
+    val showPermissionWarningDialog = mutableStateOf(false)
+
     fun getEmTransportById(emTransportId: String){
         repository.getEmTransportById(emTransportId){
             emTransportModel.value = it
@@ -60,6 +63,14 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
+    fun updateLocationLiveTracking(
+        em_call_id: String,
+        long: Double,
+        lat: Double
+    ){
+        repository.updateLocationLiveTracking(em_call_id, long, lat)
+    }
+
     init {
         viewModelScope.launch {
             emTransportId.value = repository.getTransportId()
@@ -67,8 +78,8 @@ class DashboardViewModel @Inject constructor(
 
         viewModelScope.launch {
             repository.getEmCall {
-                emCallAktifNamunBelumKonfirmasi.clear()
-                emCallAktifNamunBelumKonfirmasi.addAll(it)
+                emCalls.clear()
+                emCalls.addAll(it)
             }
         }
     }

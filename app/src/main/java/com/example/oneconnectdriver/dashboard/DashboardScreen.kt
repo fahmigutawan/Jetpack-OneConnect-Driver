@@ -1,6 +1,10 @@
 package com.example.oneconnectdriver.dashboard
 
-import androidx.compose.foundation.background
+import android.annotation.SuppressLint
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,28 +20,101 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.example.oneconnectdriver.AppDialog
 import com.example.oneconnectdriver.CallStatus
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.shouldShowRationale
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
 
+@SuppressLint("MissingPermission")
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun DashboardScreen(
     navController: NavController
 ) {
     val viewModel = hiltViewModel<DashboardViewModel>()
+    val context = LocalContext.current
+    val openSettingIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+    val openSettingUri = Uri.fromParts("package", context.packageName, null)
+    openSettingIntent.data = openSettingUri
+    val permission = rememberPermissionState(
+        permission = android.Manifest.permission.ACCESS_FINE_LOCATION
+    )
+    val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+    val callback = object : LocationCallback() {
+        override fun onLocationResult(p0: LocationResult) {
+            super.onLocationResult(p0)
+
+            if (permission.status.isGranted) {
+                if (viewModel.emCalls.any { it.em_call_status_id == CallStatus.DALAM_PERJALANAN }) {
+                    val newest =
+                        viewModel.emCalls.filter { it.em_call_status_id == CallStatus.DALAM_PERJALANAN }
+                            .sortedByDescending { it.created_at }[0]
+
+                    p0.lastLocation?.let {
+                        viewModel.updateLocationLiveTracking(
+                            em_call_id = newest.em_call_id,
+                            long = it.longitude,
+                            lat = it.latitude
+                        )
+                    }
+                }
+            }
+        }
+    }
+    val updateRequest = LocationRequest.create()
+    updateRequest
+        .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+        .setInterval(2000)
+
+
+    LaunchedEffect(key1 = viewModel.emCalls.toList()) {
+        if (permission.status.isGranted) {
+            if (viewModel.emCalls.any { it.em_call_status_id == CallStatus.DALAM_PERJALANAN }) {
+                val newest =
+                    viewModel.emCalls.filter { it.em_call_status_id == CallStatus.DALAM_PERJALANAN }
+                        .sortedByDescending { it.created_at }[0]
+
+                fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
+                    viewModel.updateLocationLiveTracking(
+                        em_call_id = newest.em_call_id,
+                        long = loc.longitude,
+                        lat = loc.latitude
+                    )
+
+                    fusedLocationClient.requestLocationUpdates(
+                        updateRequest,
+                        callback,
+                        null
+                    )
+                }
+            }else{
+                fusedLocationClient.removeLocationUpdates(callback)
+            }
+        }
+    }
 
     LaunchedEffect(key1 = viewModel.emTransportId.value) {
         if (viewModel.emTransportId.value.isNotEmpty()) {
@@ -49,6 +126,48 @@ fun DashboardScreen(
 
     LaunchedEffect(key1 = true) {
         viewModel.updateFcmToken()
+    }
+
+    if (viewModel.showRationaleDialog.value) {
+        AppDialog(
+            onDismissRequest = {
+                viewModel.showRationaleDialog.value = false
+            },
+            description = "Untuk mengakses halaman MAP, pastikan anda sudah mengijinkan akses lokasi dari HP anda",
+            secondButton = {
+                Button(
+                    onClick = {
+                        permission.launchPermissionRequest()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Text(text = "Ijinkan")
+                }
+            }
+        )
+    }
+
+    if (viewModel.showPermissionWarningDialog.value) {
+        AppDialog(
+            onDismissRequest = {
+                viewModel.showPermissionWarningDialog.value = false
+            },
+            description = "Sepertinya anda harus mengijinkan akses lokasi secara manual, klik tombol di bawah ini!",
+            secondButton = {
+                Button(
+                    onClick = {
+                        context.startActivity(openSettingIntent)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Text(text = "Buka setting")
+                }
+            }
+        )
     }
 
     Column(
@@ -109,7 +228,7 @@ fun DashboardScreen(
 
             //Sedang diproses
             items(
-                viewModel.emCallAktifNamunBelumKonfirmasi.filter {
+                viewModel.emCalls.filter {
                     it.em_call_status_id == "Bc1fUMyOIZZSDoUFWUSr"
                 }
             ) { item ->
@@ -132,12 +251,26 @@ fun DashboardScreen(
                         Text(text = "Panggilan Darurat Menunggu", fontSize = 24.sp)
                         Text(text = "Segera Konfirmasi Tugas Anda")
                         Button(modifier = Modifier.fillMaxWidth(), onClick = {
-                            viewModel.updateCallStatus(
-                                item.em_call_id,
-                                "rBiU5gy2mwSus2n96cMu"
-                            ) {
+                            if (permission.status.isGranted) {
+                                viewModel.showRationaleDialog.value = false
+                                viewModel.showPermissionWarningDialog.value = false
 
+                                viewModel.updateCallStatus(
+                                    item.em_call_id,
+                                    "rBiU5gy2mwSus2n96cMu"
+                                ) {
+
+                                }
+                            } else {
+                                if (permission.status.shouldShowRationale) {
+                                    viewModel.showRationaleDialog.value = true
+                                    viewModel.showPermissionWarningDialog.value = false
+                                } else {
+                                    viewModel.showRationaleDialog.value = false
+                                    viewModel.showPermissionWarningDialog.value = true
+                                }
                             }
+
                         }) {
                             Text(text = "Konfirmasi")
                         }
@@ -147,7 +280,7 @@ fun DashboardScreen(
 
             //Sedang dalam perjalanan
             items(
-                viewModel.emCallAktifNamunBelumKonfirmasi.filter {
+                viewModel.emCalls.filter {
                     it.em_call_status_id == "rBiU5gy2mwSus2n96cMu"
                 }
             ) { item ->
@@ -179,7 +312,7 @@ fun DashboardScreen(
                             ) {
                                 viewModel.updateTransportAvailability(
                                     true
-                                ){
+                                ) {
                                     //TODO
                                 }
                             }
@@ -191,10 +324,10 @@ fun DashboardScreen(
             }
 
             items(
-                viewModel.emCallAktifNamunBelumKonfirmasi
+                viewModel.emCalls
                     .filter { it.em_call_status_id != "rBiU5gy2mwSus2n96cMu" }
                     .filter { it.em_call_status_id != "Bc1fUMyOIZZSDoUFWUSr" }
-                    .sortedBy { it.em_call_status_id }
+                    .sortedByDescending { it.em_call_status_id }
             ) { item ->
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth(),

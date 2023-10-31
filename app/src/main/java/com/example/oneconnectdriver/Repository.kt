@@ -184,10 +184,10 @@ class Repository @Inject constructor(
     }
 
     fun updateCallStatus(
-        emCallId:String,
-        status:String,
+        emCallId: String,
+        status: String,
         onSuccess: () -> Unit
-    ){
+    ) {
         realtimeDb
             .reference
             .child("em_call")
@@ -199,7 +199,7 @@ class Repository @Inject constructor(
             }
     }
 
-    suspend fun updateTransportAvailability(status:Boolean, onSuccess: () -> Unit){
+    suspend fun updateTransportAvailability(status: Boolean, onSuccess: () -> Unit) {
         val id = getTransportId()
 
         firestore
@@ -209,5 +209,22 @@ class Repository @Inject constructor(
             .addOnSuccessListener {
                 onSuccess()
             }
+    }
+
+    fun updateLocationLiveTracking(
+        em_call_id: String,
+        long: Double,
+        lat: Double
+    ) {
+        realtimeDb
+            .reference
+            .child("em_call")
+            .child(em_call_id)
+            .updateChildren(
+                mapOf(
+                    "transport_long" to long.toString(),
+                    "transport_lat" to lat.toString()
+                )
+            )
     }
 }

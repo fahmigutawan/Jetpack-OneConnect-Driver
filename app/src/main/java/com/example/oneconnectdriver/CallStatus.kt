@@ -9,4 +9,10 @@ object CallStatus {
         "dpjTG7Dxd1MwTR1m0Uph" -> "Dibatalkan"
         else -> "..."
     }
+
+    val MENUNGGU_KONFIRMASI = "S6LQDRJKurqtVAmRgBqy"
+    val DIPROSES = "Bc1fUMyOIZZSDoUFWUSr"
+    val DALAM_PERJALANAN = "rBiU5gy2mwSus2n96cMu"
+    val SELESAI = "HHxMYs0dSM10gS37PEjk"
+    val DIBATALKAN = "dpjTG7Dxd1MwTR1m0Uph"
 }
