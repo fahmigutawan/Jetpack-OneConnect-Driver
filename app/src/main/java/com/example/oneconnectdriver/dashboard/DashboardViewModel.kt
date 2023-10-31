@@ -1,5 +1,6 @@
 package com.example.oneconnectdriver.dashboard
 
+import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -45,13 +46,27 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
+    fun updateCallStatus(
+        emCallId:String,
+        status:String,
+        onSuccess: () -> Unit
+    ){
+        repository.updateCallStatus(emCallId, status, onSuccess)
+    }
+
+    fun updateTransportAvailability(status:Boolean, onSuccess: () -> Unit){
+        viewModelScope.launch {
+            repository.updateTransportAvailability(status, onSuccess)
+        }
+    }
+
     init {
         viewModelScope.launch {
             emTransportId.value = repository.getTransportId()
         }
 
         viewModelScope.launch {
-            repository.getEmCallSedangAktif {
+            repository.getEmCall {
                 emCallAktifNamunBelumKonfirmasi.clear()
                 emCallAktifNamunBelumKonfirmasi.addAll(it)
             }

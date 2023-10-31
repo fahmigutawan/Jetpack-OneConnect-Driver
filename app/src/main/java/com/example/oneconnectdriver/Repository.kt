@@ -1,6 +1,7 @@
 package com.example.oneconnectdriver
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -144,7 +145,7 @@ class Repository @Inject constructor(
             }
     }
 
-    suspend fun getEmCallSedangAktif(
+    suspend fun getEmCall(
         onListened: (List<EmCallStruct>) -> Unit
     ) {
         val id = getTransportId()
@@ -157,23 +158,20 @@ class Repository @Inject constructor(
             .addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     onListened(
-                        snapshot.children.filter {
-                            it.child("em_call_status_id").toString() == "rBiU5gy2mwSus2n96cMu"
-                        }.sortedBy {
-                            it.child("em_created")
-                                .toString()
-                                .toLong()
-                        }.map {
+                        snapshot.children.map {
                             EmCallStruct(
-                                em_call_id = it.child("em_call_id").toString(),
-                                em_call_status_id = it.child("em_call_id").toString(),
-                                em_pvd_id = it.child("em_call_id").toString(),
-                                em_transport_id = it.child("em_call_id").toString(),
-                                user_phone_number = it.child("em_call_id").toString(),
-                                uid = it.child("em_call_id").toString(),
-                                user_lat = it.child("em_call_id").toString(),
-                                user_long = it.child("em_call_id").toString()
+                                em_call_id = it.child("em_call_id").value.toString(),
+                                em_call_status_id = it.child("em_call_status_id").value.toString(),
+                                em_pvd_id = it.child("em_pvd_id").value.toString(),
+                                em_transport_id = it.child("em_transport_id").value.toString(),
+                                user_phone_number = it.child("user_phone_number").value.toString(),
+                                uid = it.child("uid").value.toString(),
+                                user_lat = it.child("user_lat").value.toString(),
+                                user_long = it.child("user_long").value.toString(),
+                                created_at = it.child("created_at").value as Long
                             )
+                        }.sortedBy {
+                            it.created_at
                         }
                     )
                 }
@@ -183,5 +181,33 @@ class Repository @Inject constructor(
                 }
 
             })
+    }
+
+    fun updateCallStatus(
+        emCallId:String,
+        status:String,
+        onSuccess: () -> Unit
+    ){
+        realtimeDb
+            .reference
+            .child("em_call")
+            .child(emCallId)
+            .child("em_call_status_id")
+            .setValue(status)
+            .addOnSuccessListener {
+                onSuccess()
+            }
+    }
+
+    suspend fun updateTransportAvailability(status:Boolean, onSuccess: () -> Unit){
+        val id = getTransportId()
+
+        firestore
+            .collection("em_transport")
+            .document(id)
+            .update("is_available", status)
+            .addOnSuccessListener {
+                onSuccess()
+            }
     }
 }

@@ -8,5 +8,6 @@ data class EmCallStruct(
     val uid:String,
     val user_lat:String,
     val user_long:String,
-    val user_phone_number:String
+    val user_phone_number:String,
+    val created_at:Long
 )
