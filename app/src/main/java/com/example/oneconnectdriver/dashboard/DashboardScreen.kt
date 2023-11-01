@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
-import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Place
@@ -28,6 +28,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
@@ -43,10 +45,13 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
+import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
+
+lateinit var fusedLocationClient: FusedLocationProviderClient
 
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalPermissionsApi::class)
@@ -62,7 +67,13 @@ fun DashboardScreen(
     val permission = rememberPermissionState(
         permission = android.Manifest.permission.ACCESS_FINE_LOCATION
     )
-    val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+    val lastDalamPerjalananCall = remember {
+        derivedStateOf {
+            viewModel.emCalls.filter { it.em_call_status_id == CallStatus.DALAM_PERJALANAN }
+                .sortedByDescending { it.created_at }.getOrNull(0)
+        }
+    }
+    fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
     val callback = object : LocationCallback() {
         override fun onLocationResult(p0: LocationResult) {
             super.onLocationResult(p0)
@@ -74,12 +85,19 @@ fun DashboardScreen(
                             .sortedByDescending { it.created_at }[0]
 
                     p0.lastLocation?.let {
-                        viewModel.updateLocationLiveTracking(
-                            em_call_id = newest.em_call_id,
-                            long = it.longitude,
-                            lat = it.latitude
-                        )
+                        if(navController.currentDestination?.route == "dashboard"){
+                            viewModel.updateLocationLiveTracking(
+                                em_call_id = newest.em_call_id,
+                                long = it.longitude,
+                                lat = it.latitude
+                            )
+                        }
+
+                        viewModel.long.value = it.longitude
+                        viewModel.lat.value = it.latitude
                     }
+                } else {
+                    fusedLocationClient.removeLocationUpdates(this)
                 }
             }
         }
@@ -87,7 +105,7 @@ fun DashboardScreen(
     val updateRequest = LocationRequest.create()
     updateRequest
         .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-        .setInterval(2000)
+        .setInterval(5000)
 
 
     LaunchedEffect(key1 = viewModel.emCalls.toList()) {
@@ -109,8 +127,11 @@ fun DashboardScreen(
                         callback,
                         null
                     )
+
+                    viewModel.long.value = loc.longitude
+                    viewModel.lat.value = loc.latitude
                 }
-            }else{
+            } else {
                 fusedLocationClient.removeLocationUpdates(callback)
             }
         }
@@ -227,11 +248,11 @@ fun DashboardScreen(
             }
 
             //Sedang diproses
-            items(
+            itemsIndexed(
                 viewModel.emCalls.filter {
                     it.em_call_status_id == "Bc1fUMyOIZZSDoUFWUSr"
                 }
-            ) { item ->
+            ) { index, item ->
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth(),
                     elevation = CardDefaults.elevatedCardElevation(defaultElevation = 16.dp)
@@ -259,7 +280,9 @@ fun DashboardScreen(
                                     item.em_call_id,
                                     "rBiU5gy2mwSus2n96cMu"
                                 ) {
-
+                                    viewModel.emCalls[index] = item.copy(
+                                        em_call_status_id = CallStatus.DALAM_PERJALANAN
+                                    )
                                 }
                             } else {
                                 if (permission.status.shouldShowRationale) {
@@ -279,11 +302,11 @@ fun DashboardScreen(
             }
 
             //Sedang dalam perjalanan
-            items(
+            itemsIndexed(
                 viewModel.emCalls.filter {
                     it.em_call_status_id == "rBiU5gy2mwSus2n96cMu"
                 }
-            ) { item ->
+            ) { index, item ->
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth(),
                     elevation = CardDefaults.elevatedCardElevation(defaultElevation = 16.dp)
@@ -302,18 +325,27 @@ fun DashboardScreen(
 
                         Text(text = "Anda Sedang Dalam Perjalanan", fontSize = 24.sp)
                         Text(text = "Pastikan Anda Selalu Membuka Aplikasi Agar Live Tracking Berjalan")
-                        Button(modifier = Modifier.fillMaxWidth(), onClick = { /*TODO*/ }) {
-                            Text(text = "Dummy Location Picker")
+                        Button(modifier = Modifier.fillMaxWidth(), onClick = {
+                            navController.navigate("dummy_location/${lastDalamPerjalananCall.value?.em_call_id ?: ""}/${viewModel.long.value}/${viewModel.lat.value}"){
+                                popUpTo(navController.graph.id){
+                                    inclusive = true
+                                }
+                            }
+                            fusedLocationClient.removeLocationUpdates(callback)
+                        }) {
+                            Text(text = "Dummy Location Picker (Untuk Prototyping)")
                         }
                         Button(modifier = Modifier.fillMaxWidth(), onClick = {
                             viewModel.updateCallStatus(
                                 item.em_call_id,
-                                "HHxMYs0dSM10gS37PEjk"
+                                CallStatus.SELESAI
                             ) {
                                 viewModel.updateTransportAvailability(
                                     true
                                 ) {
-                                    //TODO
+                                    viewModel.emCalls[index] = item.copy(
+                                        em_call_status_id = CallStatus.DALAM_PERJALANAN
+                                    )
                                 }
                             }
                         }) {

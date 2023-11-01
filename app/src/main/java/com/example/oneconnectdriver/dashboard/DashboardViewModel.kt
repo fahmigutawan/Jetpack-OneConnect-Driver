@@ -23,6 +23,9 @@ class DashboardViewModel @Inject constructor(
     val showRationaleDialog = mutableStateOf(false)
     val showPermissionWarningDialog = mutableStateOf(false)
 
+    val long = mutableStateOf(.0)
+    val lat = mutableStateOf(.0)
+
     fun getEmTransportById(emTransportId: String){
         repository.getEmTransportById(emTransportId){
             emTransportModel.value = it
