@@ -250,7 +250,7 @@ fun DashboardScreen(
             //Sedang diproses
             itemsIndexed(
                 viewModel.emCalls.filter {
-                    it.em_call_status_id == "Bc1fUMyOIZZSDoUFWUSr"
+                    it.em_call_status_id == CallStatus.DIPROSES
                 }
             ) { index, item ->
                 ElevatedCard(
@@ -280,9 +280,7 @@ fun DashboardScreen(
                                     item.em_call_id,
                                     "rBiU5gy2mwSus2n96cMu"
                                 ) {
-                                    viewModel.emCalls[index] = item.copy(
-                                        em_call_status_id = CallStatus.DALAM_PERJALANAN
-                                    )
+                                    viewModel.updateEmCalls()
                                 }
                             } else {
                                 if (permission.status.shouldShowRationale) {
@@ -304,7 +302,7 @@ fun DashboardScreen(
             //Sedang dalam perjalanan
             itemsIndexed(
                 viewModel.emCalls.filter {
-                    it.em_call_status_id == "rBiU5gy2mwSus2n96cMu"
+                    it.em_call_status_id == CallStatus.DALAM_PERJALANAN
                 }
             ) { index, item ->
                 ElevatedCard(
@@ -343,9 +341,7 @@ fun DashboardScreen(
                                 viewModel.updateTransportAvailability(
                                     true
                                 ) {
-                                    viewModel.emCalls[index] = item.copy(
-                                        em_call_status_id = CallStatus.DALAM_PERJALANAN
-                                    )
+                                    viewModel.updateEmCalls()
                                 }
                             }
                         }) {

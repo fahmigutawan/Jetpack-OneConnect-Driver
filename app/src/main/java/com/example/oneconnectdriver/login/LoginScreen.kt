@@ -16,7 +16,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 
@@ -38,20 +40,24 @@ fun LoginScreen(navController: NavController) {
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Column {
+                        Text(
+                            text = "Plat Nomor: ${item.regist_number}",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                         Text(text = "ID Transport: ${item.em_transport_id}")
-                        Text(text = "Nama Penyedia: ${item.pvd_name}")
-                        Text(text = "Plat Nomor: ${item.regist_number}")
                     }
 
-                    Button(onClick = { viewModel.login(
-                        item.em_transport_id
-                    ) {
-                        navController.navigate("dashboard"){
-                            popUpTo(navController.graph.id){
-                                inclusive = true
+                    Button(onClick = {
+                        viewModel.login(
+                            item.em_transport_id
+                        ) {
+                            navController.navigate("dashboard") {
+                                popUpTo(navController.graph.id) {
+                                    inclusive = true
+                                }
                             }
                         }
-                    }
                     }) {
                         Text(text = "Masuk Dengan Akun Ini")
                     }

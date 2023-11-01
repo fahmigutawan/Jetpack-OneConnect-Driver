@@ -149,38 +149,41 @@ class Repository @Inject constructor(
         onListened: (List<EmCallStruct>) -> Unit
     ) {
         val id = getTransportId()
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                onListened(
+                    snapshot.children.map {
+                        EmCallStruct(
+                            em_call_id = it.child("em_call_id").value.toString(),
+                            em_call_status_id = it.child("em_call_status_id").value.toString(),
+                            em_pvd_id = it.child("em_pvd_id").value.toString(),
+                            em_transport_id = it.child("em_transport_id").value.toString(),
+                            user_phone_number = it.child("user_phone_number").value.toString(),
+                            uid = it.child("uid").value.toString(),
+                            user_lat = it.child("user_lat").value.toString(),
+                            user_long = it.child("user_long").value.toString(),
+                            created_at = it.child("created_at").value as Long
+                        )
+                    }.sortedBy {
+                        it.created_at
+                    }
+                )
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                //TODO
+            }
+
+        }
+
+        realtimeDb.reference.removeEventListener(listener)
 
         realtimeDb
             .reference
             .child("em_call")
             .orderByChild("em_transport_id")
             .equalTo(id)
-            .addValueEventListener(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    onListened(
-                        snapshot.children.map {
-                            EmCallStruct(
-                                em_call_id = it.child("em_call_id").value.toString(),
-                                em_call_status_id = it.child("em_call_status_id").value.toString(),
-                                em_pvd_id = it.child("em_pvd_id").value.toString(),
-                                em_transport_id = it.child("em_transport_id").value.toString(),
-                                user_phone_number = it.child("user_phone_number").value.toString(),
-                                uid = it.child("uid").value.toString(),
-                                user_lat = it.child("user_lat").value.toString(),
-                                user_long = it.child("user_long").value.toString(),
-                                created_at = it.child("created_at").value as Long
-                            )
-                        }.sortedBy {
-                            it.created_at
-                        }
-                    )
-                }
-
-                override fun onCancelled(error: DatabaseError) {
-                    //TODO
-                }
-
-            })
+            .addValueEventListener(listener)
     }
 
     fun updateCallStatus(

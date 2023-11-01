@@ -1,5 +1,6 @@
 package com.example.oneconnectdriver.dashboard
 
+import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -74,16 +75,21 @@ class DashboardViewModel @Inject constructor(
         repository.updateLocationLiveTracking(em_call_id, long, lat)
     }
 
+    fun updateEmCalls(){
+        viewModelScope.launch {
+            repository.getEmCall {
+                Log.e("ASDASD", it.toString())
+                emCalls.clear()
+                emCalls.addAll(it)
+            }
+        }
+    }
+
     init {
         viewModelScope.launch {
             emTransportId.value = repository.getTransportId()
         }
 
-        viewModelScope.launch {
-            repository.getEmCall {
-                emCalls.clear()
-                emCalls.addAll(it)
-            }
-        }
+        updateEmCalls()
     }
 }
