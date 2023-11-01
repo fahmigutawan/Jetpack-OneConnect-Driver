@@ -78,7 +78,6 @@ class DashboardViewModel @Inject constructor(
     fun updateEmCalls(){
         viewModelScope.launch {
             repository.getEmCall {
-                Log.e("ASDASD", it.toString())
                 emCalls.clear()
                 emCalls.addAll(it)
             }
