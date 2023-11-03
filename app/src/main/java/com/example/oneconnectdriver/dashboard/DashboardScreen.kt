@@ -237,6 +237,106 @@ fun DashboardScreen(
             }
         }
 
+        //Sedang diproses
+        viewModel.emCalls.filter {
+            it.em_call_status_id == CallStatus.DIPROSES
+        }.getOrNull(0)?.let { item ->
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            modifier = Modifier.size(128.dp),
+                            imageVector = Icons.Default.Phone,
+                            contentDescription = ""
+                        )
+                    }
+
+                    Text(text = "Panggilan Darurat Menunggu", fontSize = 24.sp)
+                    Text(text = "Segera Konfirmasi Tugas Anda")
+                    Button(modifier = Modifier.fillMaxWidth(), onClick = {
+                        if (permission.status.isGranted) {
+                            viewModel.showRationaleDialog.value = false
+                            viewModel.showPermissionWarningDialog.value = false
+
+                            viewModel.updateCallStatus(
+                                item.em_call_id,
+                                "rBiU5gy2mwSus2n96cMu"
+                            ) {
+                                viewModel.updateEmCalls()
+                            }
+                        } else {
+                            if (permission.status.shouldShowRationale) {
+                                viewModel.showRationaleDialog.value = true
+                                viewModel.showPermissionWarningDialog.value = false
+                            } else {
+                                viewModel.showRationaleDialog.value = false
+                                viewModel.showPermissionWarningDialog.value = true
+                            }
+                        }
+
+                    }) {
+                        Text(text = "Konfirmasi")
+                    }
+                }
+            }
+        }
+
+        //Sedang dalam perjalanan
+        viewModel.emCalls.filter {
+            it.em_call_status_id == CallStatus.DALAM_PERJALANAN
+        }.getOrNull(0)?.let { item ->
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            modifier = Modifier.size(128.dp),
+                            imageVector = Icons.Default.Place,
+                            contentDescription = ""
+                        )
+                    }
+
+                    Text(text = "Anda Sedang Dalam Perjalanan", fontSize = 24.sp)
+                    Text(text = "Pastikan Anda Selalu Membuka Aplikasi Agar Live Tracking Berjalan")
+                    Button(modifier = Modifier.fillMaxWidth(), onClick = {
+                        navController.navigate("dummy_location/${lastDalamPerjalananCall.value?.em_call_id ?: ""}/${viewModel.long.value}/${viewModel.lat.value}"){
+                            popUpTo(navController.graph.id){
+                                inclusive = true
+                            }
+                        }
+                        fusedLocationClient.removeLocationUpdates(callback)
+                    }) {
+                        Text(text = "Dummy Location Picker (Untuk Prototyping)")
+                    }
+                    Button(modifier = Modifier.fillMaxWidth(), onClick = {
+                        viewModel.updateCallStatus(
+                            item.em_call_id,
+                            CallStatus.SELESAI
+                        ) {
+                            viewModel.updateTransportAvailability(
+                                true
+                            ) {
+                                viewModel.updateEmCalls()
+                            }
+                        }
+                    }) {
+                        Text(text = "Selesai")
+                    }
+                }
+            }
+        }
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
@@ -245,110 +345,6 @@ fun DashboardScreen(
         ) {
             item {
                 Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            //Sedang diproses
-            itemsIndexed(
-                viewModel.emCalls.filter {
-                    it.em_call_status_id == CallStatus.DIPROSES
-                }
-            ) { index, item ->
-                ElevatedCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 16.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                modifier = Modifier.size(128.dp),
-                                imageVector = Icons.Default.Phone,
-                                contentDescription = ""
-                            )
-                        }
-
-                        Text(text = "Panggilan Darurat Menunggu", fontSize = 24.sp)
-                        Text(text = "Segera Konfirmasi Tugas Anda")
-                        Button(modifier = Modifier.fillMaxWidth(), onClick = {
-                            if (permission.status.isGranted) {
-                                viewModel.showRationaleDialog.value = false
-                                viewModel.showPermissionWarningDialog.value = false
-
-                                viewModel.updateCallStatus(
-                                    item.em_call_id,
-                                    "rBiU5gy2mwSus2n96cMu"
-                                ) {
-                                    viewModel.updateEmCalls()
-                                }
-                            } else {
-                                if (permission.status.shouldShowRationale) {
-                                    viewModel.showRationaleDialog.value = true
-                                    viewModel.showPermissionWarningDialog.value = false
-                                } else {
-                                    viewModel.showRationaleDialog.value = false
-                                    viewModel.showPermissionWarningDialog.value = true
-                                }
-                            }
-
-                        }) {
-                            Text(text = "Konfirmasi")
-                        }
-                    }
-                }
-            }
-
-            //Sedang dalam perjalanan
-            itemsIndexed(
-                viewModel.emCalls.filter {
-                    it.em_call_status_id == CallStatus.DALAM_PERJALANAN
-                }
-            ) { index, item ->
-                ElevatedCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 16.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                modifier = Modifier.size(128.dp),
-                                imageVector = Icons.Default.Place,
-                                contentDescription = ""
-                            )
-                        }
-
-                        Text(text = "Anda Sedang Dalam Perjalanan", fontSize = 24.sp)
-                        Text(text = "Pastikan Anda Selalu Membuka Aplikasi Agar Live Tracking Berjalan")
-                        Button(modifier = Modifier.fillMaxWidth(), onClick = {
-                            navController.navigate("dummy_location/${lastDalamPerjalananCall.value?.em_call_id ?: ""}/${viewModel.long.value}/${viewModel.lat.value}"){
-                                popUpTo(navController.graph.id){
-                                    inclusive = true
-                                }
-                            }
-                            fusedLocationClient.removeLocationUpdates(callback)
-                        }) {
-                            Text(text = "Dummy Location Picker (Untuk Prototyping)")
-                        }
-                        Button(modifier = Modifier.fillMaxWidth(), onClick = {
-                            viewModel.updateCallStatus(
-                                item.em_call_id,
-                                CallStatus.SELESAI
-                            ) {
-                                viewModel.updateTransportAvailability(
-                                    true
-                                ) {
-                                    viewModel.updateEmCalls()
-                                }
-                            }
-                        }) {
-                            Text(text = "Selesai")
-                        }
-                    }
-                }
             }
 
             items(
